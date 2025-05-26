@@ -1,6 +1,7 @@
 const History = require('../models/History');
 const Task = require('../models/Task');
 const cloudinary = require('../config/cloudinary');
+const User = require('../models/User');
 
 // Marcar una tarea como completada
 const completeTask = async (req, res) => {
@@ -54,7 +55,7 @@ const getHomeHistory = async (req, res) => {
     const history = await History.find()
       .populate({
         path: 'task',
-       // match: { home: user.home }, // 🔥 Aquí está el filtro importante
+        match: { home: user.home }, // 🔥 Aquí está el filtro importante
         populate: {
           path: 'assignedTo',
           select: 'name'
