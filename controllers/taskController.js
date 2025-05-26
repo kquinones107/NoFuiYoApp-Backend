@@ -3,7 +3,7 @@ const User = require('../models/User');
 
 // Crear nueva tarea
 const createTask = async (req, res) => {
-  const { name, assignedTo, frequency } = req.body;
+  const { name, assignedTo, frequency, dueDate } = req.body;
   const userId = req.user.id;
 
   if (!name || !assignedTo || !dueDate) {
