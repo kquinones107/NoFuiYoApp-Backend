@@ -54,7 +54,7 @@ const getHomeHistory = async (req, res) => {
     const history = await History.find()
       .populate({
         path: 'task',
-        match: { home: user.home }, // 🔥 Aquí está el filtro importante
+       // match: { home: user.home }, // 🔥 Aquí está el filtro importante
         populate: {
           path: 'assignedTo',
           select: 'name'
