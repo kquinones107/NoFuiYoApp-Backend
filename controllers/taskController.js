@@ -31,11 +31,26 @@ const createTask = async (req, res) => {
 
 // Obtener tareas del hogar
 const getTasks = async (req, res) => {
-  const user = await User.findById(req.user.id);
-  if (!user.home) return res.status(400).json({ message: 'Debes pertenecer a un hogar' });
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user.home) {
+      return res.status(400).json({ message: 'Debes pertenecer a un hogar' });
+    }
 
-  const tasks = await Task.find({ home: user.home }).populate('assignedTo', 'name email');
-  res.status(200).json({ tasks });
+    // Obtener IDs de tareas ya hechas desde el historial
+    const completedHistories = await History.find().select('task');
+    const completedTaskIds = completedHistories.map(h => h.task.toString());
+
+    // Traer solo tareas del hogar que no están en el historial
+    const tasks = await Task.find({
+      home: user.home,
+      _id: { $nin: completedTaskIds },
+    }).populate('assignedTo', 'name email');
+
+    res.status(200).json({ tasks });
+  } catch (err) {
+    res.status(500).json({ message: 'Error al cargar tareas', error: err });
+  }
 };
 
 module.exports = { createTask, getTasks };
