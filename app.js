@@ -37,10 +37,6 @@ app.get('/api/protected', authMiddleware, (req, res) => {
   res.send(`Hola ${req.user.email}, estás autenticado ✅`);
 });
 
-const cors = require('cors');
-app.use(cors({
-  origin: '*', // En producción podrías restringir esto a tu dominio
-}));
 
 app.get('/', (req, res) => {
   res.send('Casa en Orden API está activa 🚀');
