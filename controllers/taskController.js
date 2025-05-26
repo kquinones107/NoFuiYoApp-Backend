@@ -1,5 +1,7 @@
 const Task = require('../models/Task');
 const User = require('../models/User');
+const History = require('../models/History');
+
 
 // Crear nueva tarea
 const createTask = async (req, res) => {
