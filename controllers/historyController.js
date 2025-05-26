@@ -7,11 +7,12 @@ const User = require('../models/User');
 const completeTask = async (req, res) => {
   const { taskId } = req.params;
   const userId = req.user.id;
-  const { photoUrl } = req.body;
+  const photoUrl = req.body.photoUrl || (req.file ? result.secure_url : null);
   console.log('📥 photoUrl recibido del frontend:', req.body.photoUrl);
+  console.log('📷 Archivo recibido:', req.file);
 
   try {
-    let photoUrl = null;
+    let photoUrl = req.body.photoUrl || null;
 
      if (req.file) {
       const result = await cloudinary.uploader.upload(req.file.path, {
@@ -24,10 +25,11 @@ const completeTask = async (req, res) => {
     const now = new Date();
     const late = task.dueDate && now > task.dueDate;
 
+    console.log('✅ Preparando historial con photoUrl:', photoUrl);
     const history = await History.create({
       task: taskId,
       doneBy: userId,
-      photoUrl: photoUrl || null,
+      photoUrl,
       late,
       
     });
