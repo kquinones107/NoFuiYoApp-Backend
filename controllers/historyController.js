@@ -44,12 +44,17 @@ const completeTask = async (req, res) => {
 
 // Ver historial del hogar del usuario
 const getHomeHistory = async (req, res) => {
-  const { home } = await req.user; // cargado desde middleware si lo deseas
-
   try {
+    const user = await User.findById(req.user.id);
+    if (!user.home) {
+      return res.status(400).json({ message: 'No perteneces a un hogar' });
+    }
+
+    // Traer solo historial de tareas cuyo hogar coincida
     const history = await History.find()
       .populate({
         path: 'task',
+        match: { home: user.home }, // 🔥 Aquí está el filtro importante
         populate: {
           path: 'assignedTo',
           select: 'name'
@@ -58,8 +63,12 @@ const getHomeHistory = async (req, res) => {
       .populate('doneBy', 'name')
       .sort({ doneAt: -1 });
 
-    res.status(200).json({ history });
+    // Elimina entradas donde la tarea fue null (porque no coincide con el hogar)
+    const filteredHistory = history.filter(h => h.task !== null);
+
+    res.status(200).json({ history: filteredHistory });
   } catch (err) {
+    console.error('❌ Error al consultar historial:', err);
     res.status(500).json({ message: 'Error al consultar historial', error: err });
   }
 };
