@@ -50,13 +50,24 @@ const joinHome = async (req, res) => {
 
 // Ver miembros de la casa
 const getHomeMembers = async (req, res) => {
-  const user = await User.findById(req.user.id).populate('home');
+  try {
+    const user = await User.findById(req.user.id).populate('home');
 
-  if (!user.home) return res.status(400).json({ message: 'No perteneces a un hogar' });
+    if (!user.home) {
+      return res.status(400).json({ message: 'No perteneces a un hogar' });
+    }
 
-  const home = await Home.findById(user.home._id).populate('members', 'name email');
+    // Obtener los miembros del hogar
+    const members = await User.find({ home: user.home._id }).select('name email');
 
-  res.status(200).json({ members: home.members });
+    // Incluir nombre y código del hogar
+    const homeDetails = await Home.findById(user.home._id).select('name code');
+
+    res.status(200).json({ home: homeDetails, members });
+  } catch (error) {
+    console.error('Error al obtener miembros del hogar:', error);
+    res.status(500).json({ message: 'Error al obtener miembros del hogar', error });
+  }
 };
 
 const getMyHomes = async (req, res) => {
