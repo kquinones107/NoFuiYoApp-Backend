@@ -1,9 +1,4 @@
 const User = require('../models/User');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-
-
-const User = require('../models/User');
 const { getOrCreateUserByClerkId } = require('../utils/getOrCreateUser');
 
 const updateProfile = async (req, res) => {
