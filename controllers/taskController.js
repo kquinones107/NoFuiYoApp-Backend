@@ -1,28 +1,30 @@
 const Task = require('../models/Task');
 const User = require('../models/User');
 const History = require('../models/History');
-
+const { getOrCreateUserByClerkId } = require('../utils/getOrCreateUser');
 
 // Crear nueva tarea
 const createTask = async (req, res) => {
   const { name, assignedTo, frequency, dueDate } = req.body;
-  const userId = req.user.id;
+  const clerkUserId = req.clerkUserId;
 
   if (!name || !assignedTo || !dueDate) {
     return res.status(400).json({ message: 'Faltan campos requeridos' });
   }
 
   try {
-    const user = await User.findById(userId);
+    // 1) Usuario interno por Clerk
+    const user = await getOrCreateUserByClerkId(clerkUserId);
+
     if (!user.home) return res.status(400).json({ message: 'Debes pertenecer a un hogar' });
 
     const task = await Task.create({
       name,
       home: user.home,
-      assignedTo,
+      assignedTo,          // esto sigue siendo un User._id (Mongo)
       frequency,
       dueDate,
-      createdBy: req.user.id,
+      createdBy: user._id, // 👈 antes req.user.id, ahora user._id
     });
 
     res.status(201).json({ message: 'Tarea creada correctamente', task });
@@ -34,22 +36,36 @@ const createTask = async (req, res) => {
 // Obtener tareas del hogar
 const getTasks = async (req, res) => {
   try {
-    const user = await User.findById(req.user.id);
+    const clerkUserId = req.clerkUserId;
+
+    // 1️⃣ Obtener usuario interno desde Clerk
+    const user = await getOrCreateUserByClerkId(clerkUserId);
+
     if (!user.home) {
       return res.status(400).json({ message: 'Debes pertenecer a un hogar' });
     }
 
-    // Obtener IDs de tareas ya hechas desde el historial
-    const completedHistories = await History.find().select('task');
-    const completedTaskIds = completedHistories.map(h => h.task.toString());
+    // 2️⃣ Buscar todas las tareas del hogar
+    const tasksInHome = await Task.find({ home: user.home }).select('_id');
+    const taskIds = tasksInHome.map(t => t._id);
 
-    // Traer solo tareas del hogar que no están en el historial
+    // 3️⃣ Buscar historial SOLO de esas tareas
+    const completedHistories = await History.find({
+      task: { $in: taskIds }
+    }).select('task');
+
+    const completedTaskIds = completedHistories.map(h =>
+      h.task.toString()
+    );
+
+    // 4️⃣ Traer tareas del hogar que NO estén completadas
     const tasks = await Task.find({
       home: user.home,
-      _id: { $nin: completedTaskIds },
+      _id: { $nin: completedTaskIds }
     }).populate('assignedTo', 'name email');
 
     res.status(200).json({ tasks });
+
   } catch (err) {
     res.status(500).json({ message: 'Error al cargar tareas', error: err });
   }

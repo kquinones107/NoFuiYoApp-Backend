@@ -1,13 +1,17 @@
 const History = require('../models/History');
 const User = require('../models/User');
-const mongoose = require('mongoose');
+const { getOrCreateUserByClerkId } = require('../utils/getOrCreateUser');
 
 const getMonthlyStats = async (req, res) => {
-  const userId = req.user.id;
-
   try {
-    const user = await User.findById(userId);
-    if (!user.home) return res.status(400).json({ message: 'No perteneces a un hogar' });
+    const clerkUserId = req.clerkUserId;
+
+    // 1) Usuario interno (Mongo) desde Clerk
+    const internalUser = await getOrCreateUserByClerkId(clerkUserId);
+
+    // Si tu helper crea usuario sin home, igual verificamos en BD
+    const user = await User.findById(internalUser._id);
+    if (!user?.home) return res.status(400).json({ message: 'No perteneces a un hogar' });
 
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -16,16 +20,13 @@ const getMonthlyStats = async (req, res) => {
     const history = await History.find({
       doneAt: { $gte: startOfMonth, $lte: endOfMonth },
     })
-      .populate({
-        path: 'task',
-        match: { }, // no necesitas filtro si no tienes campo 'home' en Task
-      })
+      .populate('task') // necesitas dueDate
       .populate('doneBy', 'name home');
 
     const statsMap = {};
 
     for (const h of history) {
-      // Validar si la tarea o el usuario no pertenecen al hogar
+      // Filtrar por el hogar del usuario
       if (!h.task || !h.doneBy || h.doneBy.home?.toString() !== user.home.toString()) {
         continue;
       }
@@ -42,19 +43,22 @@ const getMonthlyStats = async (req, res) => {
 
       statsMap[userIdStr].completed++;
 
-      const dueDate = new Date(h.task.dueDate);
+      const dueDate = h.task.dueDate ? new Date(h.task.dueDate) : null;
       const doneDate = new Date(h.doneAt);
-      if (doneDate > dueDate) {
+
+      if (dueDate && doneDate > dueDate) {
         statsMap[userIdStr].late++;
       }
     }
 
-    const result = Object.values(statsMap).map((entry) => ({
-      name: entry.name,
-      points: entry.completed - entry.late,
-      completed: entry.completed,
-      late: entry.late,
-    })).sort((a, b) => b.points - a.points); // ordenamos por puntos descendente
+    const result = Object.values(statsMap)
+      .map((entry) => ({
+        name: entry.name,
+        points: entry.completed - entry.late,
+        completed: entry.completed,
+        late: entry.late,
+      }))
+      .sort((a, b) => b.points - a.points);
 
     res.json({ stats: result });
   } catch (err) {

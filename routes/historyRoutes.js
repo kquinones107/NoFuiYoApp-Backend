@@ -1,17 +1,17 @@
 const express = require('express');
 const router = express.Router();
-const authMiddleware = require('../middlewares/authMiddleware');
 const { completeTask, getHomeHistory } = require('../controllers/historyController');
+const clerkAuth = require("../middlewares/clerkAuth");
 
 const upload = require('../middlewares/upload');
 
 router.post(
   '/:taskId/complete',
-  authMiddleware,
+  clerkAuth,
   upload.single('image'),
   completeTask
 );
 
-router.get('/', authMiddleware, getHomeHistory);
+router.get('/', clerkAuth, getHomeHistory);
 
 module.exports = router;
