@@ -4,6 +4,15 @@ const dotenv = require('dotenv');
 
 dotenv.config();
 
+// ── Startup environment check ─────────────────────────────────────────────────
+const REQUIRED_ENV = ['CLERK_SECRET_KEY', 'MONGO_URI'];
+const missing = REQUIRED_ENV.filter((k) => !process.env[k]);
+if (missing.length) {
+  console.error('❌ Missing required environment variables:', missing.join(', '));
+  console.error('   Add them to your .env file or Render dashboard and restart.');
+}
+// ─────────────────────────────────────────────────────────────────────────────
+
 const app = express();
 
 app.use(cors());
