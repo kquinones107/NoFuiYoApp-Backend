@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const { clerkMiddleware } = require('@clerk/express');
 
 dotenv.config();
 
@@ -17,6 +18,7 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use(clerkMiddleware());
 
 // Rutas
 const authRoutes = require('./routes/authRoutes');
@@ -41,11 +43,21 @@ const specialDatesRoutes = require('./routes/specialDatesRoutes');
 app.use('/api/dates', specialDatesRoutes);
 
 // Ruta de prueba protegida
-const authMiddleware = require('./middlewares/authMiddleware');
-app.get('/api/protected', authMiddleware, (req, res) => {
-  res.send(`Hola ${req.user.email}, estás autenticado ✅`);
+const requireClerkAuth = require('./middlewares/requireClerkAuth');
+
+app.get('/api/protected', requireClerkAuth, (req, res) => {
+  res.json({
+    message: 'Autenticado con Clerk ✅',
+    clerkUserId: req.clerkUserId,
+  });
 });
 
+router.get('/me', requireClerkAuth, async (req, res) => {
+  res.json({
+    ok: true,
+    clerkUserId: req.clerkUserId,
+  });
+});
 
 app.get('/', (req, res) => {
   res.send('Casa en Orden API está activa 🚀');

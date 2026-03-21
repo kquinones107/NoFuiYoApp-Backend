@@ -1,8 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const { register, login, updateProfile } = require('../controllers/authController');
-const clerkAuth = require("../middlewares/clerkAuth");
+const { updateProfile } = require('../controllers/authController');
+const requireClerkAuth = require("../middlewares/requirerequireClerkAuth");
 
-router.put('/profile', clerkAuth, updateProfile);
+router.put('/profile', requireClerkAuth, updateProfile);
+
 
 module.exports = router;

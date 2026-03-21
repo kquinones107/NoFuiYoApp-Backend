@@ -2,9 +2,9 @@ const express = require('express');
 const router = express.Router();
 const authMiddleware = require('../middlewares/authMiddleware');
 const { getDates, createDate } = require('../controllers/specialDatesController');
-const clerkAuth = require("../middlewares/clerkAuth");
+const requireClerkAuth = require("../middlewares/requireClerkAuth");
 
-router.get('/', clerkAuth, getDates);
-router.post('/', clerkAuth, createDate);
+router.get('/', requireClerkAuth, getDates);
+router.post('/', requireClerkAuth, createDate);
 
 module.exports = router;
