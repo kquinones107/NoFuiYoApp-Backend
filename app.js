@@ -52,12 +52,7 @@ app.get('/api/protected', requireClerkAuth, (req, res) => {
   });
 });
 
-router.get('/me', requireClerkAuth, async (req, res) => {
-  res.json({
-    ok: true,
-    clerkUserId: req.clerkUserId,
-  });
-});
+
 
 app.get('/', (req, res) => {
   res.send('Casa en Orden API está activa 🚀');
