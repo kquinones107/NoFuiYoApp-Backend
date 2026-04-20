@@ -25,37 +25,56 @@ const createHome = async (req, res) => {
   const { name } = req.body;
   const clerkUserId = req.clerkUserId;
 
+  console.log('[createHome] called — clerkUserId:', clerkUserId, '| name:', name);
+
+  if (!clerkUserId) {
+    console.error('[createHome] clerkUserId is missing on req');
+    return res.status(400).json({ message: 'clerkUserId missing from request' });
+  }
+
   try {
-    // 1) Mapear Clerk -> User interno (Mongo)
+    console.log('[createHome] Step 1: getOrCreateUserByClerkId...');
     const user = await getOrCreateUserByClerkId(clerkUserId);
+    console.log('[createHome] Step 1 OK — internal userId:', user._id.toString());
 
     let newHome;
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const code = inviteCode(6);
+      console.log(`[createHome] Step 2: attempt #${attempt + 1} — trying code: ${code}`);
       try {
         newHome = await Home.create({
           name,
           code,
           members: [user._id],
         });
+        console.log('[createHome] Step 2 OK — home created:', newHome._id.toString());
         break;
       } catch (e) {
-        if (e && e.code === 11000 && String(e.message || '').includes('code')) continue;
+        if (e && e.code === 11000 && String(e.message || '').includes('code')) {
+          console.warn('[createHome] Duplicate code, retrying...');
+          continue;
+        }
+        console.error('[createHome] Step 2 FAILED — Home.create error:', e?.message, e?.code);
         throw e;
       }
     }
     if (!newHome) {
+      console.error('[createHome] Could not generate unique invite code after 5 attempts');
       return res.status(500).json({ message: 'Error al crear hogar', error: 'No se pudo generar un código único' });
     }
 
+    console.log('[createHome] Step 3: updating user with home reference...');
     await User.findByIdAndUpdate(user._id, {
       home: newHome._id,
       isAdmin: true,
     });
+    console.log('[createHome] Step 3 OK — user updated');
 
+    console.log('[createHome] ✅ Success — responding 201');
     res.status(201).json({ message: 'Hogar creado', home: newHome });
   } catch (err) {
-    console.error('createHome:', err);
+    console.error('[createHome] ❌ Unexpected error:', err?.name, err?.message);
+    console.error('[createHome] Full error:', err);
     res.status(500).json({ message: 'Error al crear hogar', error: safeErrorPayload(err) });
   }
 };
