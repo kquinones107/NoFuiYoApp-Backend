@@ -5,7 +5,7 @@ const { getOrCreateUserByClerkId } = require('../utils/getOrCreateUser');
 
 // Crear nueva tarea
 const createTask = async (req, res) => {
-  const { name, assignedTo, frequency, dueDate } = req.body;
+  const { name, assignedTo, frequency, dueDate, customIntervalDays } = req.body;
   const clerkUserId = req.clerkUserId;
 
   if (!name || !assignedTo || !dueDate) {
@@ -18,11 +18,26 @@ const createTask = async (req, res) => {
 
     if (!user.home) return res.status(400).json({ message: 'Debes pertenecer a un hogar' });
 
+    const allowedFreq = ['daily', 'weekly', 'monthly', 'custom'];
+    const freq = allowedFreq.includes(frequency) ? frequency : 'daily';
+
+    let intervalDays = null;
+    if (freq === 'custom') {
+      const n = Number(customIntervalDays);
+      if (!Number.isFinite(n) || n < 1 || n > 365) {
+        return res.status(400).json({
+          message: 'Para frecuencia personalizada indica customIntervalDays entre 1 y 365',
+        });
+      }
+      intervalDays = Math.round(n);
+    }
+
     const task = await Task.create({
       name,
       home: user.home,
       assignedTo,          // esto sigue siendo un User._id (Mongo)
-      frequency,
+      frequency: freq,
+      ...(freq === 'custom' ? { customIntervalDays: intervalDays } : {}),
       dueDate,
       createdBy: user._id, // 👈 antes req.user.id, ahora user._id
     });

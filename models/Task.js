@@ -17,8 +17,14 @@ const taskSchema = new mongoose.Schema({
   },
   frequency: {
     type: String,
-    enum: ['daily', 'weekly', 'custom'],
+    enum: ['daily', 'weekly', 'monthly', 'custom'],
     default: 'daily'
+  },
+  /** Used when frequency is "custom": repeat every N days (1–365). */
+  customIntervalDays: {
+    type: Number,
+    min: 1,
+    max: 365,
   },
   nextDate: {
     type: Date,
