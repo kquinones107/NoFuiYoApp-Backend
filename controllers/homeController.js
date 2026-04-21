@@ -144,4 +144,55 @@ const getMyHomes = async (req, res) => {
   }
 };
 
-module.exports = { createHome, joinHome, getHomeMembers, getMyHomes };
+const updateHome = async (req, res) => {
+  const { id } = req.params;
+  const { name } = req.body;
+  const clerkUserId = req.clerkUserId;
+
+  if (!name || !name.trim()) {
+    return res.status(400).json({ message: 'El nombre es requerido' });
+  }
+
+  try {
+    const user = await getOrCreateUserByClerkId(clerkUserId);
+    const home = await Home.findById(id);
+
+    if (!home) return res.status(404).json({ message: 'Hogar no encontrado' });
+
+    const isMember = home.members.map((m) => m.toString()).includes(user._id.toString());
+    if (!isMember) return res.status(403).json({ message: 'No autorizado' });
+
+    home.name = name.trim();
+    await home.save();
+
+    res.status(200).json({ message: 'Hogar actualizado', home });
+  } catch (err) {
+    console.error('updateHome:', err);
+    res.status(500).json({ message: 'Error al actualizar hogar', error: safeErrorPayload(err) });
+  }
+};
+
+const deleteHome = async (req, res) => {
+  const { id } = req.params;
+  const clerkUserId = req.clerkUserId;
+
+  try {
+    const user = await getOrCreateUserByClerkId(clerkUserId);
+    const home = await Home.findById(id);
+
+    if (!home) return res.status(404).json({ message: 'Hogar no encontrado' });
+
+    const isMember = home.members.map((m) => m.toString()).includes(user._id.toString());
+    if (!isMember) return res.status(403).json({ message: 'No autorizado' });
+
+    await User.updateMany({ home: home._id }, { $unset: { home: 1 } });
+    await Home.findByIdAndDelete(id);
+
+    res.status(200).json({ message: 'Hogar eliminado' });
+  } catch (err) {
+    console.error('deleteHome:', err);
+    res.status(500).json({ message: 'Error al eliminar hogar', error: safeErrorPayload(err) });
+  }
+};
+
+module.exports = { createHome, joinHome, getHomeMembers, getMyHomes, updateHome, deleteHome };
