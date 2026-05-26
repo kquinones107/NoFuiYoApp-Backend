@@ -1,4 +1,3 @@
-const User = require('../models/User');
 const { getOrCreateUserByClerkId } = require('../utils/getOrCreateUser');
 const { clerkClient } = require('@clerk/clerk-sdk-node');
 const User = require('../models/User');
