@@ -37,6 +37,12 @@ const createHome = async (req, res) => {
     const user = await getOrCreateUserByClerkId(clerkUserId);
     console.log('[createHome] Step 1 OK — internal userId:', user._id.toString());
 
+    if (user.home) {
+      return res.status(400).json({
+        message: 'Ya perteneces a un hogar. Debes salir o eliminar tu hogar actual antes de crear otro.',
+      });
+    }
+
     let newHome;
     for (let attempt = 0; attempt < 5; attempt += 1) {
       const code = inviteCode(6);
@@ -86,6 +92,12 @@ const joinHome = async (req, res) => {
 
   try {
     const user = await getOrCreateUserByClerkId(clerkUserId);
+
+    if (user.home) {
+      return res.status(400).json({
+        message: 'Ya perteneces a un hogar. No puedes unirte a otro hogar.',
+      });
+    }
 
     const home = await Home.findOne({ code });
     if (!home) return res.status(404).json({ message: 'Código de hogar no encontrado' });
