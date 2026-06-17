@@ -45,6 +45,9 @@ app.use('/api/dates', specialDatesRoutes);
 const neighborRoutes = require('./routes/neighborRoutes');
 app.use('/api/neighbors', neighborRoutes);
 
+const gossipRoutes = require('./routes/gossipRoutes');
+app.use('/api/gossip', gossipRoutes);
+
 // Ruta de prueba protegida
 const requireClerkAuth = require('./middlewares/requireClerkAuth');
 
