@@ -25,7 +25,10 @@ mongoose.connect(MONGO_URI)
     }
 
     await mongoose.model('User').syncIndexes();
+    await mongoose.model('Gossip').syncIndexes();
+
     console.log('✅ User indexes synced');
+    console.log('✅ Gossip indexes synced');
 
     app.listen(PORT, () => {
       console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);

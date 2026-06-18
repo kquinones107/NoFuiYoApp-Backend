@@ -27,7 +27,10 @@ const gossipSchema = new mongoose.Schema({
   },
 }, { timestamps: true });
 
-gossipSchema.index({ expiresAt: 1 });
+gossipSchema.index(
+  { expiresAt: 1 },
+  { expireAfterSeconds: 0 }
+);
 gossipSchema.index({ home: 1, createdAt: -1 });
 
 module.exports = mongoose.model('Gossip', gossipSchema);
