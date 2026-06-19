@@ -18,7 +18,7 @@ const gossipReactionSchema = new mongoose.Schema({
   },
 }, { timestamps: true });
 
-gossipReactionSchema.index({ gossip: 1, user: 1, reaction: 1 }, { unique: true });
+gossipReactionSchema.index({ gossip: 1, user: 1}, { unique: true });
 gossipReactionSchema.index({ gossip: 1 });
 
 module.exports = mongoose.model('GossipReaction', gossipReactionSchema);

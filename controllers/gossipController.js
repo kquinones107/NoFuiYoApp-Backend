@@ -314,11 +314,15 @@ const reactToGossip = async (req, res) => {
     const existing = await GossipReaction.findOne({
       gossip: gossip._id,
       user: user._id,
-      reaction,
     });
 
     if (existing) {
-      await GossipReaction.findByIdAndDelete(existing._id);
+      if (existing.reaction === reaction) {
+        await GossipReaction.findByIdAndDelete(existing._id);
+      } else {
+        existing.reaction = reaction;
+        await existing.save();
+      }
     } else {
       await GossipReaction.create({
         gossip: gossip._id,
@@ -342,7 +346,7 @@ const reactToGossip = async (req, res) => {
     });
 
     res.status(200).json({
-      message: existing ? 'Reacción quitada' : 'Reacción agregada',
+      message: 'Reacción actualizada',
       reactions,
     });
   } catch (err) {
