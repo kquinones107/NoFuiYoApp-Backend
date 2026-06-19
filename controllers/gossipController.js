@@ -3,6 +3,7 @@ const GossipReply = require('../models/GossipReply');
 const HomeNeighbor = require('../models/HomeNeighbor');
 const User = require('../models/User');
 const { getOrCreateUserByClerkId } = require('../utils/getOrCreateUser');
+const GossipReaction = require('../models/GossipReaction');
 
 function safeErrorPayload(err) {
   if (!err || typeof err !== 'object') return { message: String(err) };
@@ -242,9 +243,82 @@ const replyToGossip = async (req, res) => {
   }
 };
 
+const reactToGossip = async (req, res) => {
+  const { id } = req.params;
+  const { reaction } = req.body;
+  const clerkUserId = req.clerkUserId;
+
+  const allowedReactions = ['😂', '👀', '🔥', '😱', '🤯'];
+
+  if (!allowedReactions.includes(reaction)) {
+    return res.status(400).json({ message: 'Reacción no válida' });
+  }
+
+  try {
+    const { user, homeId } = await getCurrentUserHome(clerkUserId);
+    const neighborHomeIds = await getNeighborHomeIds(homeId);
+
+    const visibleHomeIds = [homeId, ...neighborHomeIds];
+    const now = new Date();
+
+    const gossip = await Gossip.findOne({
+      _id: id,
+      home: { $in: visibleHomeIds },
+      status: 'active',
+      expiresAt: { $gt: now },
+    });
+
+    if (!gossip) {
+      return res.status(404).json({ message: 'Chismecito no encontrado o expirado' });
+    }
+
+    const existing = await GossipReaction.findOne({
+      gossip: gossip._id,
+      user: user._id,
+      reaction,
+    });
+
+    if (existing) {
+      await GossipReaction.findByIdAndDelete(existing._id);
+    } else {
+      await GossipReaction.create({
+        gossip: gossip._id,
+        user: user._id,
+        reaction,
+      });
+    }
+
+    const reactionCounts = await GossipReaction.aggregate([
+      { $match: { gossip: gossip._id } },
+      { $group: { _id: '$reaction', count: { $sum: 1 } } },
+    ]);
+
+    const reactions = {};
+    allowedReactions.forEach((r) => {
+      reactions[r] = 0;
+    });
+
+    reactionCounts.forEach((item) => {
+      reactions[item._id] = item.count;
+    });
+
+    res.status(200).json({
+      message: existing ? 'Reacción quitada' : 'Reacción agregada',
+      reactions,
+    });
+  } catch (err) {
+    console.error('reactToGossip:', err);
+    res.status(err.statusCode || 500).json({
+      message: err.message || 'Error al reaccionar al chismecito',
+      error: safeErrorPayload(err),
+    });
+  }
+};
+
 module.exports = {
   createGossip,
   getGossipFeed,
   getGossipById,
   replyToGossip,
+  reactToGossip,
 };
