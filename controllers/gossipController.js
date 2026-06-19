@@ -124,13 +124,52 @@ const getGossipFeed = async (req, res) => {
       countMap[item._id.toString()] = item.count;
     });
 
-    const feed = gossips.map((gossip) => ({
-      _id: gossip._id,
-      content: gossip.content,
-      createdAt: gossip.createdAt,
-      expiresAt: gossip.expiresAt,
-      replyCount: countMap[gossip._id.toString()] || 0,
-    }));
+    const reactionCounts = await GossipReaction.aggregate([
+      { $match: { gossip: { $in: gossipIds } } },
+      {
+        $group: {
+          _id: {
+            gossip: '$gossip',
+            reaction: '$reaction',
+          },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const defaultReactions = {
+      '😂': 0,
+      '👀': 0,
+      '🔥': 0,
+      '😱': 0,
+      '🤯': 0,
+    };
+
+    const reactionMap = {};
+
+    reactionCounts.forEach((item) => {
+      const gossipId = item._id.gossip.toString();
+      const reaction = item._id.reaction;
+
+      if (!reactionMap[gossipId]) {
+        reactionMap[gossipId] = { ...defaultReactions };
+      }
+
+      reactionMap[gossipId][reaction] = item.count;
+    });
+
+    const feed = gossips.map((gossip) => {
+      const gossipId = gossip._id.toString();
+
+      return {
+        _id: gossip._id,
+        content: gossip.content,
+        createdAt: gossip.createdAt,
+        expiresAt: gossip.expiresAt,
+        replyCount: countMap[gossipId] || 0,
+        reactions: reactionMap[gossipId] || { ...defaultReactions },
+      };
+    });
 
     res.status(200).json({ gossips: feed });
   } catch (err) {
