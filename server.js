@@ -30,40 +30,6 @@ mongoose.connect(MONGO_URI)
     await mongoose.model('Gossip').syncIndexes();
     console.log('✅ Gossip indexes synced');
 
-    try {
-      const GossipReaction = require('./models/GossipReaction');
-
-      const duplicates = await GossipReaction.aggregate([
-        {
-          $group: {
-            _id: {
-              gossip: '$gossip',
-              user: '$user',
-            },
-            ids: { $push: '$_id' },
-            count: { $sum: 1 },
-          },
-        },
-        {
-          $match: {
-            count: { $gt: 1 },
-          },
-        },
-      ]);
-
-      for (const item of duplicates) {
-        const idsToDelete = item.ids.slice(1);
-
-        await GossipReaction.deleteMany({
-          _id: { $in: idsToDelete },
-        });
-      }
-
-      console.log(`✅ Cleaned duplicate gossip reactions: ${duplicates.length}`);
-    } catch (err) {
-      console.warn('⚠️ Could not clean duplicate gossip reactions:', err.message);
-    }
-
     await mongoose.model('GossipReaction').syncIndexes();
     console.log('✅ GossipReaction indexes synced');
 
